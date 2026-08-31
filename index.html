@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Alarm Bangun Tidur</title>
+  <meta name="theme-color" content="#4f46e5">
+  <link rel="manifest" href="data:application/manifest+json,{
+    %22name%22:%22Alarm%20Bangun%20Tidur%22,
+    %22short_name%22:%22Alarm%22,
+    %22start_url%22:%22.%22,
+    %22display%22:%22standalone%22,
+    %22background_color%22:%22%230f172a%22,
+    %22theme_color%22:%22%234f46e5%22
+  }">
+  <style>
+    :root {
+      --bg-color: #0f172a;
+      --card-bg: #1e293b;
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
+      --danger: #ef4444;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 16px;
+    }
+
+    .app-container {
+      width: 100%;
+      max-width: 420px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    header {
+      text-align: center;
+      padding-top: 10px;
+    }
+
+    h1 {
+      font-size: 1.2rem;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    .clock-display {
+      background: var(--card-bg);
+      padding: 24px;
+      border-radius: 20px;
+      text-align: center;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    }
+
+    .time {
+      font-size: 3.5rem;
+      font-weight: 700;
+      letter-spacing: -1px;
+    }
+
+    .date {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin-top: 4px;
+    }
+
+    .alarm-form {
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .form-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    input[type="time"], input[type="text"] {
+      background: #334155;
+      border: 1px solid #475569;
+      color: var(--text);
+      padding: 12px;
+      border-radius: 12px;
+      font-size: 1rem;
+      outline: none;
+      width: 100%;
+    }
+
+    button {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    button:active {
+      background: var(--accent-hover);
+    }
+
+    .alarm-list {
+      display: flex;
+      flex-direction: flex-direction: column;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .alarm-item {
+      background: var(--card-bg);
+      padding: 16px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .alarm-info .alarm-time {
+      font-size: 1.5rem;
+      font-weight: 600;
+    }
+
+    .alarm-info .alarm-label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .alarm-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 48px;
+      height: 26px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #334155;
+      transition: .3s;
+      border-radius: 26px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: var(--accent);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(22px);
+    }
+
+    .btn-icon {
+      background: transparent;
+      padding: 6px;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .btn-delete {
+      color: var(--danger);
+    }
+
+    /* Modal Alarm Ringing */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.95);
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      z-index: 100;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal h2 {
+      font-size: 2rem;
+      animation: pulse 1s infinite alternate;
+    }
+
+    @keyframes pulse {
+      from { transform: scale(1); }
+      to { transform: scale(1.05); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+    <header>
+      <h1>Alarm Saya</h1>
+    </header>
+
+    <div class="clock-display">
+      <div class="time" id="clock">00:00:00</div>
+      <div class="date" id="date">Senin, 1 Jan 2026</div>
+    </div>
+
+    <form class="alarm-form" id="alarm-form">
+      <div class="form-row">
+        <input type="time" id="alarm-time" required>
+        <input type="text" id="alarm-label" placeholder="Catatan (opsional)">
+      </div>
+      <button type="submit" id="form-submit-btn">Tambah Alarm</button>
+    </form>
+
+    <div class="alarm-list" id="alarm-list"></div>
+  </div>
+
+  <div class="modal" id="alarm-modal">
+    <h2 id="modal-label">Waktunya Bangun!</h2>
+    <button id="stop-btn" style="background: var(--danger); padding: 16px 32px; font-size: 1.2rem;">Matikan Alarm</button>
+  </div>
+
+  <script>
+    let alarms = JSON.parse(localStorage.getItem('alarms')) || [];
+    let editId = null;
+    let audioCtx = null;
+    let oscillator = null;
+    let vibrationInterval = null;
+
+    const clockEl = document.getElementById('clock');
+    const dateEl = document.getElementById('date');
+    const alarmForm = document.getElementById('alarm-form');
+    const alarmTimeInput = document.getElementById('alarm-time');
+    const alarmLabelInput = document.getElementById('alarm-label');
+    const alarmListEl = document.getElementById('alarm-list');
+    const formSubmitBtn = document.getElementById('form-submit-btn');
+    const alarmModal = document.getElementById('alarm-modal');
+    const modalLabel = document.getElementById('modal-label');
+    const stopBtn = document.getElementById('stop-btn');
+
+    // Update Jam Real-time
+    function updateClock() {
+      const now = new Date();
+      clockEl.textContent = now.toLocaleTimeString('id-ID', { hour12: false });
+      
+      const options = { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' };
+      dateEl.textContent = now.toLocaleDateString('id-ID', options);
+
+      checkAlarms(now);
+    }
+
+    // Periksa Alarm
+    function checkAlarms(now) {
+      const currentHours = String(now.getHours()).padStart(2, '0');
+      const currentMinutes = String(now.getMinutes()).padStart(2, '0');
+      const currentSeconds = now.getSeconds();
+
+      if (currentSeconds === 0) {
+        alarms.forEach(alarm => {
+          if (alarm.active && alarm.time === `${currentHours}:${currentMinutes}`) {
+            triggerAlarm(alarm);
+          }
+        });
+      }
+    }
+
+    // Jalankan Suara & Getaran
+    function triggerAlarm(alarm) {
+      modalLabel.textContent = alarm.label || "Waktunya Bangun!";
+      alarmModal.classList.add('active');
+
+      // Suara Menggunakan Web Audio API
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // Nada A5
+      gainNode.gain.setValueAtTime(1, audioCtx.currentTime);
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      oscillator.start();
+
+      // Getaran HP
+      if ('vibrate' in navigator) {
+        vibrationInterval = setInterval(() => {
+          navigator.vibrate([500, 250, 500]);
+        }, 1250);
+      }
+    }
+
+    // Hentikan Alarm
+    stopBtn.addEventListener('click', () => {
+      if (oscillator) {
+        oscillator.stop();
+        oscillator.disconnect();
+      }
+      if (vibrationInterval) {
+        clearInterval(vibrationInterval);
+      }
+      alarmModal.classList.remove('active');
+    });
+
+    // Simpan ke LocalStorage
+    function saveAlarms() {
+      localStorage.setItem('alarms', JSON.stringify(alarms));
+      renderAlarms();
+    }
+
+    // Render Daftar Alarm
+    function renderAlarms() {
+      alarmListEl.innerHTML = '';
+      
+      alarms.sort((a, b) => a.time.localeCompare(b.time));
+
+      alarms.forEach(alarm => {
+        const item = document.createElement('div');
+        item.className = 'alarm-item';
+        item.innerHTML = `
+          <div class="alarm-info">
+            <div class="alarm-time">${alarm.time}</div>
+            <div class="alarm-label">${alarm.label || 'Tanpa Catatan'}</div>
+          </div>
+          <div class="alarm-controls">
+            <label class="switch">
+              <input type="checkbox" ${alarm.active ? 'checked' : ''} onchange="toggleAlarm('${alarm.id}')">
+              <span class="slider"></span>
+            </label>
+            <button class="btn-icon" onclick="editAlarm('${alarm.id}')">✏️</button>
+            <button class="btn-icon btn-delete" onclick="deleteAlarm('${alarm.id}')">🗑️</button>
+          </div>
+        `;
+        alarmListEl.appendChild(item);
+      });
+    }
+
+    // Form Tambah / Edit
+    alarmForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const time = alarmTimeInput.value;
+      const label = alarmLabelInput.value;
+
+      if (editId) {
+        alarms = alarms.map(a => a.id === editId ? { ...a, time, label } : a);
+        editId = null;
+        formSubmitBtn.textContent = 'Tambah Alarm';
+      } else {
+        alarms.push({
+          id: Date.now().toString(),
+          time,
+          label,
+          active: true
+        });
+      }
+
+      alarmForm.reset();
+      saveAlarms();
+    });
+
+    // Toggle Aktif/Nonaktif
+    window.toggleAlarm = (id) => {
+      alarms = alarms.map(a => a.id === id ? { ...a, active: !a.active } : a);
+      saveAlarms();
+    };
+
+    // Edit Alarm
+    window.editAlarm = (id) => {
+      const alarm = alarms.find(a => a.id === id);
+      if (alarm) {
+        alarmTimeInput.value = alarm.time;
+        alarmLabelInput.value = alarm.label;
+        editId = id;
+        formSubmitBtn.textContent = 'Simpan Perubahan';
+      }
+    };
+
+    // Hapus Alarm
+    window.deleteAlarm = (id) => {
+      alarms = alarms.filter(a => a.id !== id);
+      saveAlarms();
+    };
+
+    // Registrasi Service Worker Sederhana untuk PWA
+    if ('serviceWorker' in navigator) {
+      const swCode = `
+        self.addEventListener('fetch', (e) => {
+          e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+        });
+      `;
+      const blob = new Blob([swCode], { type: 'application/javascript' });
+      navigator.serviceWorker.register(URL.createObjectURL(blob));
+    }
+
+    // Inisialisasi
+    setInterval(updateClock, 1000);
+    updateClock();
+    renderAlarms();
+  </script>
+</body>
+</html>
